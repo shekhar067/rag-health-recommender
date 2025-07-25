@@ -6,6 +6,7 @@ Author: <Your Name>
 """
 
 import os
+os.environ["TRANSFORMERS_NO_TF"] = "1"
 import json
 import logging
 from typing import List, Tuple
