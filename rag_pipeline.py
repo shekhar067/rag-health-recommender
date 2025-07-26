@@ -1,4 +1,3 @@
-# rag_pipeline.py
 """
 Retrieval-Augmented Generation (RAG) for Personalized Health Recommendations
 Uses BioBERT for retrieval, FAISS for semantic search, and FLAN-T5 for answer generation.
@@ -14,7 +13,7 @@ from typing import List, Tuple
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import faiss
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -54,26 +53,20 @@ FAISS_INDEX.add(np.array(DOC_EMBEDDINGS))
 logging.info("Indexing complete.")
 
 # -------------------------------
-# 4. LLM FOR GENERATION
+# 4. LLM FOR GENERATION (PyTorch only)
 # -------------------------------
 logging.info("Loading FLAN-T5 generator...")
-
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-
-# Explicitly load tokenizer and model in PyTorch (never TF)
 tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
 model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large")
-
 GENERATOR = pipeline(
     "text2text-generation",
     model=model,
     tokenizer=tokenizer,
-    framework="pt",  # force PyTorch
-    device=-1,       # use 0 if you want to use GPU
+    framework="pt",  # PyTorch only!
+    device=-1,       # -1=CPU, 0=GPU if available
     max_length=128
 )
 logging.info("Generator loaded.")
-
 
 # -------------------------------
 # 5. RAG PIPELINE
