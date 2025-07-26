@@ -1,12 +1,24 @@
-sentence-transformers>=2.7.0
-huggingface_hub>=0.28.1
-transformers>=4.44.0
-faiss-cpu>=1.8.0
-nltk>=3.8.1
-rouge-score>=0.1.2
-bert-score>=0.3.13
-pandas>=2.0.0
-scipy>=1.10.0
+# Core ML Libraries
+torch
+pandas
+numpy
+scipy
+
+# Hugging Face Libraries
+transformers
+sentence-transformers
 accelerate
 bitsandbytes
+huggingface_hub
+
+# Tokenizer Dependencies for MedAlpaca
+protobuf
+tiktoken
+sentencepiece
+
+# RAG & Evaluation
+faiss-cpu
+nltk
+rouge-score
+bert-score
 matplotlib
