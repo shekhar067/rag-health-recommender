@@ -27,15 +27,19 @@ def load_mimic_notes(mimic_csv_path: str, max_notes: int = 10000) -> Tuple[List[
     logging.info("Loading MIMIC-III notes...")
     try:
         df = pd.read_csv(mimic_csv_path)
-        df = df[df['CATEGORY'] == 'Discharge summary'].head(max_notes)
+        if 'CATEGORY' in df.columns:
+            df = df[df['CATEGORY'] == 'Discharge summary'].head(max_notes)
+        else:
+            df = df.head(max_notes)
         notes = [preprocess_text(note) for note in df['TEXT'].fillna('').tolist()]
-        titles = df['ROW_ID'].astype(str).tolist()
+        titles = df.get('ROW_ID', range(len(notes))).astype(str).tolist()
+        if not notes:
+            logging.warning("No notes loaded. Check CSV content.")
         logging.info(f"Loaded {len(notes)} notes.")
         return notes, titles
     except Exception as e:
         logging.error(f"Failed to load MIMIC-III notes: {e}")
         raise
-
 # -------------------------------
 # 2. EMBEDDING MODEL (BioBERT)
 # -------------------------------

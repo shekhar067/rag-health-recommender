@@ -2,10 +2,6 @@
 __pycache__/
 *.pyc
 
-# Data files
-data/
-*.csv
-
 # Outputs
 outputs/
 *.bin

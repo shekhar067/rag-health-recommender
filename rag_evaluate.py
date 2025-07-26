@@ -22,18 +22,24 @@ def preprocess_text(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-def create_mimic_samples(mimic_csv_path: str, diagnoses_csv_path: str, num_samples: int = 50) -> List[Dict]:
-    """Create query-gold pairs from MIMIC-III notes and diagnoses."""
+def create_mimic_samples(mimic_csv_path: str, diagnoses_csv_path: str = None, num_samples: int = 50) -> List[Dict]:
+    """Create query-gold pairs from MIMIC-III notes."""
     logging.info("Creating evaluation samples...")
     try:
         df_notes = pd.read_csv(mimic_csv_path)
-        df_diag = pd.read_csv(diagnoses_csv_path)
-        df = df_notes.merge(df_diag, on='HADM_ID')
-        df = df[df['CATEGORY'] == 'Discharge summary'].head(num_samples)
+        if 'CATEGORY' in df.columns:
+            df_notes = df_notes[df_notes['CATEGORY'] == 'Discharge summary'].head(num_samples)
+        else:
+            df_notes = df_notes.head(num_samples)
         
         samples = []
-        for _, row in df.iterrows():
-            condition = row['ICD9_CODE']  # Simplified; map ICD-9 to condition name in practice
+        df_diag = pd.read_csv(diagnoses_csv_path) if diagnoses_csv_path else None
+        for _, row in df_notes.iterrows():
+            condition = "unknown condition"
+            if df_diag is not None:
+                diag_row = df_diag[df_diag['HADM_ID'] == row['HADM_ID']]
+                if not diag_row.empty:
+                    condition = diag_row['ICD9_CODE'].iloc[0]
             query = f"What is the treatment for {condition}?"
             gold = extract_treatment(row['TEXT'])
             samples.append({"query": query, "gold": gold})
@@ -42,7 +48,6 @@ def create_mimic_samples(mimic_csv_path: str, diagnoses_csv_path: str, num_sampl
     except Exception as e:
         logging.error(f"Failed to create samples: {e}")
         raise
-
 def extract_treatment(note: str) -> str:
     """Extract treatment from note (simplified, needs medical expertise)."""
     note = preprocess_text(note)

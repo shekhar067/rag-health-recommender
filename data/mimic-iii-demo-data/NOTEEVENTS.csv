@@ -1,0 +1,11 @@
+ROW_ID,SUBJECT_ID,HADM_ID,CHARTDATE,CHARTTIME,CATEGORY,DESCRIPTION,TEXT
+1,1001,20001,2025-01-01,2025-01-01 08:00:00,Discharge summary,Report,Patient is a 55-year-old male with hypertension. Managed with lifestyle changes and lisinopril 10 mg daily. BP stable at 130/80. Follow-up in 4 weeks.
+2,1002,20002,2025-01-02,2025-01-02 09:00:00,Discharge summary,Report,Patient is a 62-year-old female with type 2 diabetes. Prescribed metformin 500 mg twice daily. A1C 7.2%. Dietary counseling provided.
+3,1003,20003,2025-01-03,2025-01-03 10:00:00,Discharge summary,Report,Patient is a 45-year-old male with asthma. Inhaled corticosteroids (budesonide) continued. No recent exacerbations. Follow-up with pulmonologist.
+4,1004,20004,2025-01-04,2025-01-04 11:00:00,Discharge summary,Report,Patient is a 70-year-old male with hyperlipidemia. Statins (atorvastatin 20 mg) prescribed. LDL 110 mg/dL. Monitor liver function.
+5,1005,20005,2025-01-05,2025-01-05 12:00:00,Discharge summary,Report,Patient is a 50-year-old female with atrial fibrillation. Warfarin 5 mg daily. INR 2.5. Continue anticoagulation therapy.
+6,1006,20006,2025-01-06,2025-01-06 13:00:00,Discharge summary,Report,Patient is a 60-year-old male with COPD. Tiotropium inhaler prescribed. Smoking cessation counseling provided.
+7,1007,20007,2025-01-07,2025-01-07 14:00:00,Discharge summary,Report,Patient is a 48-year-old female with hypothyroidism. Levothyroxine 100 mcg daily. TSH 3.0 mIU/L. Follow-up in 6 months.
+8,1008,20008,2025-01-08,2025-01-08 15:00:00,Discharge summary,Report,Patient is a 65-year-old male with heart failure. Furosemide 40 mg daily. EF 35%. Monitor weight daily.
+9,1009,20009,2025-01-09,2025-01-09 16:00:00,Discharge summary,Report,Patient is a 52-year-old female with osteoarthritis. Ibuprofen 400 mg as needed. Physical therapy recommended.
+10,1010,20010,2025-01-10,2025-01-10 17:00:00,Discharge summary,Report,Patient is a 58-year-old male with chronic kidney disease. Low-sodium diet advised. Creatinine 1.8 mg/dL. Nephrology follow-up.
