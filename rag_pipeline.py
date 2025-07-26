@@ -81,7 +81,7 @@ def build_or_load_faiss_index(docs: List[str], index_path: str, retriever_model:
     return index
 
 def build_personalized_prompt(user_query: str, patient_context: str, docs: List[str]) -> str:
-    context_str = "\n\n".join(docs)
+    context_str = "\n\n".join([doc[:500] for doc in docs])  # Reduced from 1000
     prompt = (
         f"You are a clinical assistant AI. Your task is to provide an evidence-based recommendation for a specific patient.\n\n"
         f"PATIENT PROFILE: {patient_context}\n\n"
