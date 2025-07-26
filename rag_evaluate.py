@@ -1,18 +1,4 @@
-Of course. Here is the complete, updated `rag_evaluate.py` script.
-
-The main changes in this version are:
-
-  * It now accepts `--retriever` and `--generator` arguments so you can test each of your four configurations.
-  * It saves the output CSV files with unique names (e.g., `rag_evaluation_biobert_flan-t5.csv`) so that your results for different experiments don't overwrite each other.
-  * It uses the modular `load_models` function from the updated `rag_pipeline.py`.
-
-This is the version you should use for your comparative experiments.
-
------
-
-### \#\# Updated `rag_evaluate.py` File
-
-```python
+python
 import os
 import json
 import logging
@@ -119,4 +105,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
+
