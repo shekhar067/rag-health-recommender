@@ -1,17 +1,37 @@
 [
   {
-    "query": "What are the key considerations for a post-discharge medication plan?",
-    "patient_context": "A 72-year-old female with a history of type 2 diabetes and hypertension.",
-    "gold": "For a 72-year-old female with type 2 diabetes and hypertension, the post-discharge plan should include medication reconciliation, ensuring she is on an appropriate ACE inhibitor or ARB for blood pressure, and continuing metformin for diabetes management, while monitoring for potential drug interactions and renal function."
+    "query": "What is the medication plan for this patient's high blood pressure?",
+    "patient_context": "A 55-year-old male with hypertension.",
+    "gold": "The patient's hypertension is managed with lisinopril 10 mg daily and lifestyle changes."
   },
   {
-    "query": "Given the patient's condition, what is the recommended treatment for high blood pressure?",
-    "patient_context": "A 65-year-old male patient with a history of chronic kidney disease.",
-    "gold": "For a patient with both high blood pressure and chronic kidney disease, lifestyle modifications are important, and medications such as ACE inhibitors are often recommended to manage blood pressure and protect the kidneys."
+    "query": "How is this patient's type 2 diabetes being treated?",
+    "patient_context": "A 62-year-old female with type 2 diabetes.",
+    "gold": "The patient is prescribed metformin 500 mg twice daily and has received dietary counseling."
   },
   {
-    "query": "What are the best management options for asthma?",
-    "patient_context": "A 25-year-old with persistent asthma, reporting symptoms three times a week.",
-    "gold": "For persistent asthma, inhaled corticosteroids are the primary management strategy to control inflammation. A rescue inhaler should also be available for acute symptoms."
+    "query": "What is the management strategy for this patient's asthma?",
+    "patient_context": "A 45-year-old male with a history of asthma.",
+    "gold": "The patient's asthma is managed with continued use of inhaled corticosteroids (budesonide)."
+  },
+  {
+    "query": "What medication was prescribed to manage the patient's cholesterol?",
+    "patient_context": "A 70-year-old male diagnosed with hyperlipidemia.",
+    "gold": "Statins, specifically atorvastatin 20 mg, were prescribed to manage his hyperlipidemia."
+  },
+  {
+    "query": "What is the recommended anticoagulation therapy for this patient?",
+    "patient_context": "A 50-year-old female with atrial fibrillation.",
+    "gold": "The patient is on warfarin 5 mg daily to continue anticoagulation therapy."
+  },
+  {
+    "query": "What is the prescribed treatment to manage this patient's fluid status?",
+    "patient_context": "A 65-year-old male with heart failure and an ejection fraction of 35%.",
+    "gold": "The patient is prescribed furosemide 40 mg daily and should monitor his weight daily."
+  },
+    {
+    "query": "What is the primary dietary advice for managing this patient's kidney disease?",
+    "patient_context": "A 58-year-old male with chronic kidney disease (CKD).",
+    "gold": "A low-sodium diet is advised for managing the patient's chronic kidney disease."
   }
 ]
