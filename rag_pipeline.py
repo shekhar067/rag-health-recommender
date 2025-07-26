@@ -57,8 +57,23 @@ logging.info("Indexing complete.")
 # 4. LLM FOR GENERATION
 # -------------------------------
 logging.info("Loading FLAN-T5 generator...")
-GENERATOR = pipeline("text2text-generation", model="google/flan-t5-large", max_length=128)
+
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
+# Explicitly load tokenizer and model in PyTorch (never TF)
+tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
+model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large")
+
+GENERATOR = pipeline(
+    "text2text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    framework="pt",  # force PyTorch
+    device=-1,       # use 0 if you want to use GPU
+    max_length=128
+)
 logging.info("Generator loaded.")
+
 
 # -------------------------------
 # 5. RAG PIPELINE
