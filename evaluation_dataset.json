@@ -1,0 +1,17 @@
+[
+  {
+    "query": "What are the key considerations for a post-discharge medication plan?",
+    "patient_context": "A 72-year-old female with a history of type 2 diabetes and hypertension.",
+    "gold": "For a 72-year-old female with type 2 diabetes and hypertension, the post-discharge plan should include medication reconciliation, ensuring she is on an appropriate ACE inhibitor or ARB for blood pressure, and continuing metformin for diabetes management, while monitoring for potential drug interactions and renal function."
+  },
+  {
+    "query": "Given the patient's condition, what is the recommended treatment for high blood pressure?",
+    "patient_context": "A 65-year-old male patient with a history of chronic kidney disease.",
+    "gold": "For a patient with both high blood pressure and chronic kidney disease, lifestyle modifications are important, and medications such as ACE inhibitors are often recommended to manage blood pressure and protect the kidneys."
+  },
+  {
+    "query": "What are the best management options for asthma?",
+    "patient_context": "A 25-year-old with persistent asthma, reporting symptoms three times a week.",
+    "gold": "For persistent asthma, inhaled corticosteroids are the primary management strategy to control inflammation. A rescue inhaler should also be available for acute symptoms."
+  }
+]
