@@ -1,0 +1,17 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Data files
+data/
+*.csv
+
+# Outputs
+outputs/
+*.bin
+*.log
+*.json
+
+# Virtual environments
+venv/
+env/

@@ -1,53 +1,91 @@
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
+import re
+import argparse
+import json
+import logging
 from typing import List, Dict
-
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from rouge_score import rouge_scorer
 from bert_score import score as bert_score
+from scipy.stats import ttest_rel
+from rag_pipeline import rag_health_recommend, PUBMED_DOCS, DOC_TITLES, FAISS_INDEX
 
-from rag_pipeline import rag_health_recommend
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# -- If you want to compare, define the plain LLM (no retrieval) baseline --
+# -------------------------------
+# 1. EVALUATION DATA
+# -------------------------------
+def preprocess_text(text: str) -> str:
+    """Clean MIMIC-III note text."""
+    text = re.sub(r'\[\*\*.*?\*\*\]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+def create_mimic_samples(mimic_csv_path: str, diagnoses_csv_path: str, num_samples: int = 50) -> List[Dict]:
+    """Create query-gold pairs from MIMIC-III notes and diagnoses."""
+    logging.info("Creating evaluation samples...")
+    try:
+        df_notes = pd.read_csv(mimic_csv_path)
+        df_diag = pd.read_csv(diagnoses_csv_path)
+        df = df_notes.merge(df_diag, on='HADM_ID')
+        df = df[df['CATEGORY'] == 'Discharge summary'].head(num_samples)
+        
+        samples = []
+        for _, row in df.iterrows():
+            condition = row['ICD9_CODE']  # Simplified; map ICD-9 to condition name in practice
+            query = f"What is the treatment for {condition}?"
+            gold = extract_treatment(row['TEXT'])
+            samples.append({"query": query, "gold": gold})
+        logging.info(f"Created {len(samples)} evaluation samples.")
+        return samples
+    except Exception as e:
+        logging.error(f"Failed to create samples: {e}")
+        raise
+
+def extract_treatment(note: str) -> str:
+    """Extract treatment from note (simplified, needs medical expertise)."""
+    note = preprocess_text(note)
+    match = re.search(r'(Treatment|Plan|Medication):\s*(.*?)(?:\n|$)', note, re.I)
+    return match.group(2).strip() if match else note[:100]
+
+# -------------------------------
+# 2. BASELINE LLM
+# -------------------------------
 def plain_llm_generate(user_query: str):
     from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-    tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
-    model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large")
-    generator = pipeline("text2text-generation", model=model, tokenizer=tokenizer, framework="pt", device=-1, max_length=128)
-    prompt = f"User question: {user_query}\nGive a clear, safe, evidence-based health recommendation."
-    return generator(prompt)[0]['generated_text']
+    try:
+        tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
+        model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large")
+        generator = pipeline("text2text-generation", model=model, tokenizer=tokenizer, framework="pt", device=-1, max_length=128)
+        prompt = f"User question: {user_query}\nGive a clear, safe, evidence-based health recommendation."
+        return generator(prompt)[0]['generated_text']
+    except Exception as e:
+        logging.error(f"Baseline LLM failed: {e}")
+        return f"Error: {str(e)}"
 
-# ---- Your sample set ----
-SAMPLES = [
-    {
-        "query": "How should high blood pressure be treated?",
-        "gold": "Lifestyle modification and medications such as ACE inhibitors."
-    },
-    {
-        "query": "What is first-line therapy for type 2 diabetes?",
-        "gold": "Metformin remains a first-line drug for type 2 diabetes."
-    }
-    # Add more...
-]
-
+# -------------------------------
+# 3. EVALUATION METRICS
+# -------------------------------
 def exact_match(pred: str, gold: str) -> bool:
     return gold.lower() in pred.lower()
 
-def compute_bleu(pred, gold):
+def compute_bleu(pred: str, gold: str) -> float:
     smoothie = SmoothingFunction().method4
     return sentence_bleu([gold.split()], pred.split(), smoothing_function=smoothie)
 
-def compute_rouge(pred, gold):
+def compute_rouge(pred: str, gold: str) -> float:
     scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     return scorer.score(gold, pred)['rougeL'].fmeasure
 
-def evaluate(samples: List[Dict], pipeline_func, system_name="RAG"):
+def evaluate(samples: List[Dict], pipeline_func, system_name: str = "RAG", top_k: int = 2, faiss_index=None, docs=None, titles=None) -> List[Dict]:
     results = []
     preds = []
     golds = []
-    print(f"\n----- {system_name} Results -----")
+    logging.info(f"\n----- {system_name} Results -----")
     for s in samples:
-        pred = pipeline_func(s["query"])
+        pred = pipeline_func(s["query"], top_k, faiss_index, docs, titles) if system_name == "RAG" else plain_llm_generate(s["query"])
+        pred = pred['answer'] if isinstance(pred, dict) else pred
         preds.append(pred)
         golds.append(s["gold"])
         bleu = compute_bleu(pred, s["gold"])
@@ -60,37 +98,104 @@ def evaluate(samples: List[Dict], pipeline_func, system_name="RAG"):
             "prediction": pred,
             "exact_match": match,
             "bleu": bleu,
-            "rougeL": rouge,
+            "rougeL": rouge
         })
-        print(f"\nQ: {s['query']}")
-        print(f"GOLD: {s['gold']}")
-        print(f"PRED: {pred}")
-        print(f"BLEU: {bleu:.2f} | ROUGE-L: {rouge:.2f} | Exact Match: {match}")
-    # BERTScore for all
-    P, R, F1 = bert_score(preds, golds, lang="en", verbose=True)
-    print(f"{system_name} BERTScore-F1 avg: {F1.mean():.3f}")
-    for idx, r in enumerate(results):
-        r['bertscore_f1'] = float(F1[idx])
+        logging.info(f"\nQ: {s['query']}\nGOLD: {s['gold']}\nPRED: {pred}\nBLEU: {bleu:.2f} | ROUGE-L: {rouge:.2f} | Exact Match: {match}")
+    
+    # BERTScore
+    try:
+        P, R, F1 = bert_score(preds, golds, lang="en", verbose=True)
+        logging.info(f"{system_name} BERTScore-F1 avg: {F1.mean():.3f}")
+        for idx, r in enumerate(results):
+            r['bertscore_f1'] = float(F1[idx])
+    except Exception as e:
+        logging.error(f"BERTScore failed: {e}")
     return results
 
-def plot_metric(rag_results, base_results, metric, title, color="green", color2="gray"):
-    rag_val = np.mean([r[metric] if metric != "exact_match" else int(r[metric]) for r in rag_results])
-    base_val = np.mean([r[metric] if metric != "exact_match" else int(r[metric]) for r in base_results])
-    plt.figure(figsize=(4,3))
-    plt.bar(["RAG", "Plain LLM"], [rag_val, base_val], color=[color, color2])
-    plt.title(f"{title}: RAG vs Plain LLM")
-    plt.ylim(0,1)
-    plt.ylabel(title)
-    plt.show()
-    print(f"{title}: RAG = {rag_val:.2f}, Plain LLM = {base_val:.2f}")
+def compute_statistical_significance(rag_results: List[Dict], base_results: List[Dict], metric: str) -> Dict:
+    """Compute paired t-test for RAG vs. baseline."""
+    try:
+        rag_vals = [r[metric] if metric != "exact_match" else int(r[metric]) for r in rag_results]
+        base_vals = [r[metric] if metric != "exact_match" else int(r[metric]) for r in base_results]
+        t_stat, p_value = ttest_rel(rag_vals, base_vals)
+        logging.info(f"{metric} t-test: t={t_stat:.2f}, p={p_value:.3f}")
+        return {"t_stat": t_stat, "p_value": p_value}
+    except Exception as e:
+        logging.error(f"Statistical test failed: {e}")
+        return {"t_stat": 0, "p_value": 1}
 
-# --------- Run everything and visualize! ---------
-rag_results = evaluate(SAMPLES, rag_health_recommend, system_name="RAG")
-base_results = evaluate(SAMPLES, plain_llm_generate, system_name="PlainLLM")
+def create_chart(rag_results: List[Dict], base_results: List[Dict], output_file: str) -> None:
+    """Generate Chart.js configuration for metrics."""
+    from statistics import mean
+    metrics = ["exact_match", "bleu", "rougeL", "bertscore_f1"]
+    chart_data = {
+        "type": "bar",
+        "data": {
+            "labels": ["RAG", "Plain LLM"],
+            "datasets": [
+                {
+                    "label": metric.replace("_", " ").title(),
+                    "data": [
+                        mean([r[metric] if metric != "exact_match" else int(r[metric]) for r in rag_results]),
+                        mean([r[metric] if metric != "exact_match" else int(r[metric]) for r in base_results])
+                    ],
+                    "backgroundColor": ["#4CAF50" if i == 0 else "#2196F3" for i in range(2)]
+                } for metric in metrics
+            ]
+        },
+        "options": {
+            "scales": {
+                "y": {
+                    "beginAtZero": true,
+                    "max": 1,
+                    "title": {"display": true, "text": "Metric Value"}
+                },
+                "x": {
+                    "title": {"display": true, "text": "System"}
+                }
+            },
+            "plugins": {
+                "title": {
+                    "display": true,
+                    "text": "RAG vs. Plain LLM Performance"
+                }
+            }
+        }
+    }
+    with open(output_file, "w") as f:
+        json.dump(chart_data, f, indent=2)
+    logging.info(f"Saved Chart.js configuration to {output_file}")
 
-plot_metric(rag_results, base_results, "exact_match", "Accuracy")
-plot_metric(rag_results, base_results, "bleu", "BLEU")
-plot_metric(rag_results, base_results, "rougeL", "ROUGE-L")
-plot_metric(rag_results, base_results, "bertscore_f1", "BERTScore-F1")
+def parse_args():
+    parser = argparse.ArgumentParser(description="RAG Evaluation")
+    parser.add_argument("--mimic_path", default="data/mimic-iii/NOTEEVENTS.csv", help="Path to MIMIC-III notes")
+    parser.add_argument("--diagnoses_path", default="data/mimic-iii/DIAGNOSES_ICD.csv", help="Path to MIMIC-III diagnoses")
+    parser.add_argument("--output", default="outputs/eval_results.json", help="Output file for evaluation results")
+    parser.add_argument("--chart_output", default="outputs/chart_config.json", help="Output file for Chart.js configuration")
+    return parser.parse_args()
 
-print("\n🎯 Done! All metrics and comparisons are above. Add more samples to SAMPLES for deeper analysis.")
+# -------------------------------
+# 5. MAIN EXECUTION
+# -----------------------
+if __name__ == "__main__":
+    args = parse_args()
+    
+    # Create evaluation samples
+    SAMPLES = create_mimic_samples(args.mimic_path, args.diagnoses_path, num_samples=50)
+    
+    # Run evaluations
+    rag_results = evaluate(SAMPLES, rag_health_recommend, system_name="RAG", top_k=2, faiss_index=FAISS_INDEX, docs=PUBMED_DOCS, titles=DOC_TITLES)
+    base_results = evaluate(SAMPLES, plain_llm_generate, system_name="PlainLLM")
+    
+    # Statistical significance
+    compute_statistical_significance(rag_results, base_results, "bertscore_f1")
+    
+    # Save results
+    with open(args.output, "w") as f:
+        json.dump({"rag_results": rag_results, "base_results": base_results}, f, indent=2)
+    logging.info(f"Saved evaluation results to {args.output}")
+    
+    # Generate visualization
+    create_chart(rag_results, base_results, args.chart_output)
+    
+    logging.info("\n🎯 Evaluation complete! Results and chart configuration saved.")
