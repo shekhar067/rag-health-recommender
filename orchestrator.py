@@ -79,7 +79,7 @@ def run_baseline_experiment(args: argparse.Namespace, eval_data: list):
         device_num = 0 if torch.cuda.is_available() else -1
         tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
         model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large", torch_dtype=torch.float16, device_map="auto")
-        generator = baseline_pipeline("text2text-generation", model=model, tokenizer=tokenizer, device=device_num, max_new_tokens=150)
+        generator = baseline_pipeline("text2text-generation", model=model, tokenizer=tokenizer, max_new_tokens=150)
         
         eval_results = []
         for item in eval_data:
