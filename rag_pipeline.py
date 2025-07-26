@@ -1,28 +1,76 @@
 import os
-os.environ["TRANSFORMERS_NO_TF"] = "1"
-import json
 import logging
 import re
 import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 import faiss
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 from typing import List, Tuple, Dict
+import torch
+
+# Central dictionary to manage model names from Hugging Face
+MODEL_MAP = {
+    "retrievers": {
+        "biobert": "pritamdeka/BioBERT-mnli-snli-scinli-scitail-mednli-stsb",
+        "pubmedbert": "microsoft/pubmedbert-base-embeddings"
+    },
+    "generators": {
+        "flan-t5": "google/flan-t5-large",
+        "medalpaca": "medalpaca/medalpaca-7b"
+    }
+}
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# -------------------------------
-# 1. DATA LOADING & PREP
-# -------------------------------
+def load_models(retriever_name: str, generator_name: str) -> Dict:
+    """Loads the specified retriever and generator models based on names."""
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    logging.info(f"Using device: {device}")
+
+    # Load Retriever Model
+    retriever_model_id = MODEL_MAP["retrievers"].get(retriever_name)
+    if not retriever_model_id:
+        raise ValueError(f"Unknown retriever: {retriever_name}")
+    logging.info(f"Loading retriever: {retriever_model_id}")
+    embed_model = SentenceTransformer(retriever_model_id, device=device)
+
+    # Load Generator Model
+    generator_model_id = MODEL_MAP["generators"].get(generator_name)
+    if not generator_model_id:
+        raise ValueError(f"Unknown generator: {generator_name}")
+    logging.info(f"Loading generator: {generator_model_id}")
+
+    # Handle different model architectures
+    if "flan-t5" in generator_name:
+        tokenizer = AutoTokenizer.from_pretrained(generator_model_id)
+        # Load with float16 and device_map for better memory usage
+        model = AutoModelForSeq2SeqLM.from_pretrained(generator_model_id, torch_dtype=torch.float16, device_map="auto")
+        task = "text2text-generation"
+    elif "medalpaca" in generator_name:
+        tokenizer = AutoTokenizer.from_pretrained(generator_model_id)
+        model = AutoModelForCausalLM.from_pretrained(generator_model_id, torch_dtype=torch.float16, device_map="auto")
+        task = "text-generation"
+    else:
+        raise ValueError(f"Generator pipeline not configured for: {generator_name}")
+
+    generator_pipeline = pipeline(
+        task,
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=150  # Use max_new_tokens for more control
+    )
+    return {"retriever": embed_model, "generator": generator_pipeline}
+
 def preprocess_text(text: str) -> str:
-    """Clean and normalize text."""
-    text = re.sub(r'\[\*\*.*?\*\*\]', '', text)  # Remove de-identified placeholders
-    text = re.sub(r'\s+', ' ', text).strip()    # Normalize whitespace
+    """Cleans and normalizes text."""
+    text = str(text) # Ensure text is a string
+    text = re.sub(r'\[\*\*.*?\*\*\]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-def load_mimic_notes(mimic_csv_path: str, max_notes: int = 10000) -> Tuple[List[str], List[str]]:
-    """Load and preprocess MIMIC-III discharge summaries."""
+def load_mimic_notes(mimic_csv_path: str, max_notes: int = 1000) -> Tuple[List[str], List[str]]:
+    """Loads and preprocesses MIMIC-III discharge summaries."""
     logging.info(f"Loading up to {max_notes} notes from {mimic_csv_path}...")
     df = pd.read_csv(mimic_csv_path)
     df = df[df['CATEGORY'] == 'Discharge summary'].head(max_notes)
@@ -31,50 +79,21 @@ def load_mimic_notes(mimic_csv_path: str, max_notes: int = 10000) -> Tuple[List[
     logging.info(f"Loaded {len(notes)} discharge summaries.")
     return notes, titles
 
-# -------------------------------
-# 2. MODEL LOADING
-# -------------------------------
-logging.info("Loading BioBERT sentence transformer...")
-EMBED_MODEL = SentenceTransformer('pritamdeka/BioBERT-mnli-snli-scinli-scitail-mednli-stsb')
-
-logging.info("Loading FLAN-T5 generator...")
-GENERATOR_TOKENIZER = AutoTokenizer.from_pretrained("google/flan-t5-large")
-GENERATOR_MODEL = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large")
-GENERATOR = pipeline(
-    "text2text-generation",
-    model=GENERATOR_MODEL,
-    tokenizer=GENERATOR_TOKENIZER,
-    device=-1, # Use -1 for CPU, 0 for GPU
-    max_length=150
-)
-
-# -------------------------------
-# 3. INDEXING
-# -------------------------------
-def build_or_load_faiss_index(docs: List[str], index_path: str) -> faiss.Index:
-    """Build a new FAISS index or load an existing one."""
+def build_or_load_faiss_index(docs: List[str], index_path: str, retriever_model: SentenceTransformer) -> faiss.Index:
+    """Builds a new FAISS index or loads an existing one using the provided retriever."""
     if os.path.exists(index_path):
         logging.info(f"Loading existing FAISS index from {index_path}")
         return faiss.read_index(index_path)
     
-    logging.info("No existing index found. Building new FAISS index...")
-    embeddings = EMBED_MODEL.encode(docs, show_progress_bar=True)
+    logging.info(f"Building new FAISS index at {index_path}...")
+    embeddings = retriever_model.encode(docs, show_progress_bar=True)
     dim = embeddings.shape[1]
     index = faiss.IndexFlatL2(dim)
     index.add(np.array(embeddings).astype('float32'))
     
-    logging.info(f"Saving FAISS index to {index_path}")
     faiss.write_index(index, index_path)
+    logging.info(f"Saved FAISS index to {index_path}")
     return index
-
-# -------------------------------
-# 4. RAG PIPELINE CORE
-# -------------------------------
-def retrieve(query: str, top_k: int, faiss_index: faiss.Index) -> List[int]:
-    """Retrieve top_k document indices from FAISS."""
-    query_emb = EMBED_MODEL.encode([query])
-    _, idxs = faiss_index.search(np.array(query_emb).astype('float32'), top_k)
-    return idxs[0]
 
 def build_personalized_prompt(user_query: str, patient_context: str, docs: List[str]) -> str:
     """Builds a prompt that includes patient context for personalization."""
@@ -97,35 +116,39 @@ def rag_health_recommend(
     user_query: str,
     patient_context: str,
     top_k: int,
+    models: Dict,
     faiss_index: faiss.Index,
     all_docs: List[str],
     all_titles: List[str]
 ) -> Dict:
-    """Runs the full personalized RAG pipeline with a safety check."""
-    logging.info(f"Processing query for patient: {patient_context}")
-    
+    """Runs the full personalized RAG pipeline using the provided models."""
+    retriever = models['retriever']
+    generator = models['generator']
+
     # 1. Retrieve
-    retrieved_indices = retrieve(user_query, top_k, faiss_index)
-    
-    # 2. Safety Check & Context Gathering
-    if len(retrieved_indices) == 0:
-        logging.warning("Safety Check: No documents were retrieved. Aborting generation.")
-        return {
-            "query": user_query,
-            "patient_context": patient_context,
-            "answer": "I cannot provide a recommendation as no relevant information was found.",
-            "citations": []
-        }
+    query_emb = retriever.encode([user_query])
+    _, idxs = faiss_index.search(np.array(query_emb).astype('float32'), top_k)
+    retrieved_indices = idxs[0]
+
+    # 2. Safety Check
+    if len(retrieved_indices) == 0 or -1 in retrieved_indices:
+        logging.warning("Safety Check: No valid documents were retrieved.")
+        return {"query": user_query, "patient_context": patient_context, "answer": "I cannot provide a recommendation as no relevant information was found.", "citations": []}
         
     retrieved_docs = [all_docs[i] for i in retrieved_indices]
     retrieved_titles = [all_titles[i] for i in retrieved_indices]
     
-    # 3. Augment (Build Prompt)
+    # 3. Augment
     prompt = build_personalized_prompt(user_query, patient_context, retrieved_docs)
     
     # 4. Generate
-    answer = GENERATOR(prompt)[0]['generated_text']
+    generated_obj = generator(prompt)[0]
+    answer = generated_obj.get('generated_text', '')
     
+    # Clean up output from Causal LMs which often include the prompt
+    if prompt in answer:
+        answer = answer.split("Answer:")[1].strip()
+
     return {
         "query": user_query,
         "patient_context": patient_context,
