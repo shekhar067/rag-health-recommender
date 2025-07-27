@@ -95,7 +95,7 @@ def run_experiment(config: tuple, args: argparse.Namespace, docs: list, titles: 
         else:
             device_num = 0 if torch.cuda.is_available() else -1
             tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
-            model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large", torch_dtype=torch.float16, device_map="auto")
+            model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large")
             generator = baseline_pipeline("text2text-generation", model=model, tokenizer=tokenizer, max_new_tokens=150)
 
         eval_results = []
