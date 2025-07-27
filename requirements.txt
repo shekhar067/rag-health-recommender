@@ -1,24 +1,30 @@
 # Core ML Libraries
-torch
-pandas
-numpy
-scipy
+torch==2.0.1+cu118  # CUDA 11.8 for Colab GPU
+pandas==2.0.3
+numpy==1.26.4
+scipy==1.11.4
 
 # Hugging Face Libraries
-transformers
-sentence-transformers
-accelerate
-bitsandbytes
-huggingface_hub
+transformers==4.44.0
+sentence-transformers==2.7.0
+accelerate==0.33.0
+bitsandbytes==0.43.1
+huggingface_hub==0.23.4
 
 # Tokenizer Dependencies for MedAlpaca
-protobuf
-tiktoken
-sentencepiece
+protobuf==4.25.3
+tiktoken==0.7.0
+sentencepiece==0.2.0
 
 # RAG & Evaluation
-faiss-cpu
-nltk
-rouge-score
-bert-score
-matplotlib
+faiss-gpu==1.8.0  # Switched to GPU version for Colab
+nltk==3.8.1
+rouge-score==0.1.2
+bert-score==0.3.13
+matplotlib==3.7.1
+seaborn==0.13.2  # Added for heatmap
+google-cloud-aiplatform==1.58.0  # Added for MedPaLM
+rank-bm25==0.2.2  # Added for hybrid retrieval
+
+# Optional: Suppress TensorFlow warnings (if needed)
+tensorflow==2.15.0  # Explicitly pinned to avoid conflicts
