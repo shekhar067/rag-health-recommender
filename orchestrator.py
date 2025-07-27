@@ -2,6 +2,8 @@
 import os
 import json
 import logging
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
 import argparse
 import pandas as pd
 import torch
@@ -15,8 +17,8 @@ from transformers import pipeline as baseline_pipeline, AutoTokenizer, AutoModel
 from google.cloud import aiplatform
 import nltk
 from typing import List
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
+
 nltk.download('wordnet', quiet=True)
 nltk.download('punkt', quiet=True)
 nltk.download('omw-1.4', quiet=True)
@@ -46,7 +48,7 @@ def compute_metrics(pred: str, gold: str, retrieved_docs: List[str]) -> dict:
     bleu = sentence_bleu([gold_tokens], pred_tokens, smoothing_function=smoothie)
     rouge_l_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     rouge_l = rouge_l_scorer.score(gold, pred)['rougeL'].fmeasure
-    meteor = meteor_score(gold_tokens if gold_tokens else [''], pred_tokens if pred_tokens else [''])
+    meteor = meteor_score([gold_tokens] if gold_tokens else [[]], [pred_tokens] if pred_tokens else [[]])
     f1 = text_f1_score(gold_tokens, pred_tokens)
     em = 1.0 if pred.lower() == gold.lower() else 0.0
     clinical_accuracy = 1.0 if "heart failure" in pred.lower() and any(term in pred.lower() for term in ["low-sodium", "furosemide"]) else 0.0
