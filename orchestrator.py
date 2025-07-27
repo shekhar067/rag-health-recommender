@@ -7,6 +7,7 @@ import torch
 import pickle
 from rag_pipeline import load_models, load_mimic_notes, build_or_load_faiss_index, rag_health_recommend
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+from seqeval.metrics import f1_score
 from rouge_score import rouge_scorer
 from nltk.translate.meteor_score import meteor_score
 from bert_score import score as bert_score
@@ -15,8 +16,10 @@ from google.cloud import aiplatform
 import nltk
 from typing import List  # Added to fix NameError
 
+nltk.download('wordnet')
 nltk.download('punkt')
-
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 def setup_logging(output_dir: str):
     """Set up logging."""
     os.makedirs(output_dir, exist_ok=True)
