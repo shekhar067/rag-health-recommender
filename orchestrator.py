@@ -12,6 +12,7 @@ from bert_score import score as bert_score
 from transformers import pipeline as baseline_pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from google.cloud import aiplatform
 import nltk
+from typing import List  # Added to fix NameError
 
 nltk.download('punkt')
 
@@ -42,7 +43,7 @@ def compute_metrics(pred: str, gold: str, retrieved_docs: List[str]) -> dict:
 
     # Novelty: Proportion of unique 3-grams not in retrieved docs
     pred_ngrams = set(nltk.ngrams(pred.split(), 3))
-    doc_ngrams = set(nltk.ngrams(" ".join(retrieved_docs).split(), 3))
+    doc_ngrams = set(nltk.ngrams(" ".join(retrieved_docs).split(), 3)) if retrieved_docs else set()
     novelty = len(pred_ngrams - doc_ngrams) / len(pred_ngrams) if pred_ngrams else 0.0
 
     # Coverage: Proportion of gold tokens in pred
@@ -52,7 +53,7 @@ def compute_metrics(pred: str, gold: str, retrieved_docs: List[str]) -> dict:
     answer_length = len(pred.split())
 
     # Faithfulness (Simple Proxy): Proportion of pred tokens in retrieved docs
-    retrieved_text = " ".join(retrieved_docs)
+    retrieved_text = " ".join(retrieved_docs) if retrieved_docs else ""
     faithfulness = len(set(pred.split()) & set(retrieved_text.split())) / len(set(pred.split())) if pred.split() else 0.0
 
     return {
@@ -74,7 +75,8 @@ def run_rag_experiment(config: tuple, args: argparse.Namespace, docs: list, titl
         eval_results = []
         for item in eval_data:
             result = rag_health_recommend(item["query"], item["patient_context"], args.top_k, models, faiss_index, docs, titles)
-            metrics = compute_metrics(result['answer'], item['gold'], result.get('retrieved_docs', []))  # Use retrieved_docs if available
+            # Ensure retrieved_docs is passed (modify rag_health_recommend to return it if needed)
+            metrics = compute_metrics(result['answer'], item['gold'], result.get('retrieved_docs', []))
             eval_results.append({"query": item["query"], "context": item["patient_context"], "gold": item['gold'], "prediction": result['answer'], **metrics})
             logging.info(f"Query: {item['query'][:50]}..., ROUGE-L: {metrics['rougeL']:.4f}, Novelty: {metrics['novelty']:.4f}")
 
