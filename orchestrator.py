@@ -16,6 +16,7 @@ from google.cloud import aiplatform
 import nltk
 from typing import List
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
 nltk.download('wordnet', quiet=True)
 nltk.download('punkt', quiet=True)
 nltk.download('omw-1.4', quiet=True)
