@@ -1,5 +1,8 @@
-# Core ML Libraries
-torch==2.0.1+cu118  # CUDA 11.8 for Colab GPU
+# --- FIXED: Use torch >= 2.1.0, matches latest Colab CUDA 12 ---
+torch==2.1.2
+torchvision==0.16.2
+torchaudio==2.1.2
+
 pandas==2.0.3
 numpy==1.26.4
 scipy==1.11.4
@@ -11,20 +14,17 @@ accelerate==0.33.0
 bitsandbytes==0.43.1
 huggingface_hub==0.23.4
 
-# Tokenizer Dependencies for MedAlpaca
 protobuf==4.25.3
 tiktoken==0.7.0
 sentencepiece==0.2.0
 
-# RAG & Evaluation
-faiss-gpu==1.8.0  # Switched to GPU version for Colab
+faiss-gpu==1.8.0
 nltk==3.8.1
 rouge-score==0.1.2
 bert-score==0.3.13
 matplotlib==3.7.1
-seaborn==0.13.2  # Added for heatmap
-google-cloud-aiplatform==1.58.0  # Added for MedPaLM
-rank-bm25==0.2.2  # Added for hybrid retrieval
+seaborn==0.13.2
+google-cloud-aiplatform==1.58.0
+rank-bm25==0.2.2
 
-# Optional: Suppress TensorFlow warnings (if needed)
-tensorflow==2.15.0  # Explicitly pinned to avoid conflicts
+tensorflow==2.15.0
