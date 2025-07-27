@@ -9,11 +9,10 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM, AutoMod
 from typing import List, Tuple, Dict
 import torch
 
-# --- CORRECTED MODEL NAME HERE ---
 MODEL_MAP = {
     "retrievers": {
         "biobert": "pritamdeka/BioBERT-mnli-snli-scinli-scitail-mednli-stsb",
-        "pubmedbert": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext" # Corrected name
+        "pubmedbert": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext"
     },
     "generators": {
         "flan-t5": "google/flan-t5-large",
@@ -23,11 +22,19 @@ MODEL_MAP = {
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# --- The rest of the file remains exactly the same ---
-
 def load_models(retriever_name: str, generator_name: str) -> Dict:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logging.info(f"Using device: {device}")
+
+    # --- THIS IS THE KEY CHANGE ---
+    # Define model loading arguments based on whether a GPU is available
+    if device == "cuda":
+        model_kwargs = {"torch_dtype": torch.float16, "device_map": "auto"}
+        logging.info("GPU detected. Loading models in half-precision (float16).")
+    else:
+        model_kwargs = {} # Empty dict for CPU, will use default full-precision (float32)
+        logging.info("No GPU detected. Loading models in full-precision (float32).")
+    # --- END OF CHANGE ---
 
     retriever_model_id = MODEL_MAP["retrievers"].get(retriever_name)
     logging.info(f"Loading retriever: {retriever_model_id}")
@@ -38,11 +45,13 @@ def load_models(retriever_name: str, generator_name: str) -> Dict:
 
     if "flan-t5" in generator_name:
         tokenizer = AutoTokenizer.from_pretrained(generator_model_id)
-        model = AutoModelForSeq2SeqLM.from_pretrained(generator_model_id, torch_dtype=torch.float16, device_map="auto")
+        # Pass the dynamically set model_kwargs
+        model = AutoModelForSeq2SeqLM.from_pretrained(generator_model_id, **model_kwargs)
         task = "text2text-generation"
     elif "medalpaca" in generator_name:
         tokenizer = AutoTokenizer.from_pretrained(generator_model_id)
-        model = AutoModelForCausalLM.from_pretrained(generator_model_id, torch_dtype=torch.float16, device_map="auto")
+        # Pass the dynamically set model_kwargs
+        model = AutoModelForCausalLM.from_pretrained(generator_model_id, **model_kwargs)
         task = "text-generation"
     else:
         raise ValueError(f"Generator pipeline not configured for: {generator_name}")
@@ -81,7 +90,7 @@ def build_or_load_faiss_index(docs: List[str], index_path: str, retriever_model:
     return index
 
 def build_personalized_prompt(user_query: str, patient_context: str, docs: List[str]) -> str:
-    context_str = "\n\n".join([doc[:500] for doc in docs])  # Reduced from 1000
+    context_str = "\n\n".join([doc[:500] for doc in docs])
     prompt = (
         f"You are a clinical assistant AI. Your task is to provide an evidence-based recommendation for a specific patient.\n\n"
         f"PATIENT PROFILE: {patient_context}\n\n"
@@ -105,7 +114,7 @@ def rag_health_recommend(user_query: str, patient_context: str, top_k: int, mode
     retrieved_indices = idxs[0]
 
     if len(retrieved_indices) == 0 or -1 in retrieved_indices:
-        return {"query": user_query, "patient_context": patient_context, "answer": "I cannot provide a recommendation as no relevant information was found.", "citations": []}
+        return {"query": user_query, "patient_context": patient_context, "answer": "I cannot provide a recommendation as no relevant information was found.", "citations": [], "retrieved_docs": []}
         
     retrieved_docs = [all_docs[i] for i in retrieved_indices if i < len(all_docs)]
     retrieved_titles = [all_titles[i] for i in retrieved_indices if i < len(all_titles)]
@@ -118,4 +127,4 @@ def rag_health_recommend(user_query: str, patient_context: str, top_k: int, mode
     if "Answer:" in answer:
         answer = answer.split("Answer:")[1].strip()
 
-    return {"query": user_query, "patient_context": patient_context, "answer": answer, "citations": retrieved_titles}
+    return {"query": user_query, "patient_context": patient_context, "answer": answer, "citations": retrieved_titles, "retrieved_docs": retrieved_docs}
