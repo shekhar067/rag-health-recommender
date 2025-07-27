@@ -1,3 +1,4 @@
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -70,8 +71,7 @@ def plot_score_distribution_box_plot(combined_df):
     """Generates a box plot to show the distribution of scores."""
     print("\n--- Generating Chart 2: Score Distribution Box Plot ---")
     melted_df = combined_df.melt(id_vars=['system'], value_vars=METRICS_TO_PLOT, var_name='metric', value_name='score')
-    
-    # --- THIS IS THE CORRECTED LINE ---
+    # NEW LINE - Correct
     melted_df['metric'] = melted_df['metric'].str.replace('_', '-').str.replace('bertscore-f1', 'BERTScore-F1').str.replace('rougeL', 'ROUGE-L').str.upper()
 
     plt.style.use('seaborn-v0_8-whitegrid')
