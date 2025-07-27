@@ -1,4 +1,4 @@
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 import os
 import json
 import logging
@@ -15,6 +15,7 @@ from transformers import pipeline as baseline_pipeline, AutoTokenizer, AutoModel
 from google.cloud import aiplatform
 import nltk
 from typing import List
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 nltk.download('wordnet', quiet=True)
 nltk.download('punkt', quiet=True)
 nltk.download('omw-1.4', quiet=True)
