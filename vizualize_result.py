@@ -6,7 +6,6 @@ import seaborn as sns
 
 # --- Configuration ---
 OUTPUT_DIR = 'outputs'
-# This list will be built dynamically from the files found in the outputs directory
 SYSTEMS_TO_COMPARE = {
     "Baseline LLM": os.path.join(OUTPUT_DIR, 'baseline_evaluation_results.csv'),
     "BioBERT + FLAN-T5": os.path.join(OUTPUT_DIR, 'rag_evaluation_biobert_flan-t5.csv'),
@@ -71,7 +70,9 @@ def plot_score_distribution_box_plot(combined_df):
     """Generates a box plot to show the distribution of scores."""
     print("\n--- Generating Chart 2: Score Distribution Box Plot ---")
     melted_df = combined_df.melt(id_vars=['system'], value_vars=METRICS_TO_PLOT, var_name='metric', value_name='score')
-    melted_df['metric'] = melted_df['metric'].str.replace('_', '-').replace('bertscore-f1', 'BERTScore-F1').replace('rougeL', 'ROUGE-L').upper()
+    
+    # --- THIS IS THE CORRECTED LINE ---
+    melted_df['metric'] = melted_df['metric'].str.replace('_', '-').str.replace('bertscore-f1', 'BERTScore-F1').str.replace('rougeL', 'ROUGE-L').str.upper()
 
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, ax = plt.subplots(figsize=(14, 8))
@@ -117,7 +118,6 @@ def create_side_by_side_table(combined_df):
         aggfunc=lambda x: ' '.join(x)
     ).reset_index()
     
-    # Reorder columns to have baseline first, then RAG models
     cols = ['query', 'gold'] + [col for col in SYSTEMS_TO_COMPARE.keys() if col in comparison_table.columns]
     comparison_table = comparison_table[cols]
     
@@ -143,10 +143,8 @@ if __name__ == "__main__":
     combined_df, system_names = load_all_data()
     
     if combined_df is not None:
-        # Calculate summary statistics
         summary_df = combined_df.groupby('system')[METRICS_TO_PLOT].mean().reindex(system_names)
         
-        # Generate all outputs
         plot_overall_performance_bar_chart(summary_df)
         plot_score_distribution_box_plot(combined_df)
         plot_radar_chart(summary_df)
