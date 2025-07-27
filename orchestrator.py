@@ -1,3 +1,4 @@
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import os
 import json
 import logging
@@ -5,8 +6,6 @@ import argparse
 import pandas as pd
 import torch
 import pickle
-
-# Import all necessary functions and libraries
 from rag_pipeline import load_models, load_mimic_notes, build_or_load_faiss_index, rag_health_recommend
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from rouge_score import rouge_scorer
@@ -16,17 +15,13 @@ from transformers import pipeline as baseline_pipeline, AutoTokenizer, AutoModel
 from google.cloud import aiplatform
 import nltk
 from typing import List
-
-# Suppress CUDA and TensorFlow warnings
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+nltk.download('wordnet', quiet=True)
+nltk.download('punkt', quiet=True)
+nltk.download('omw-1.4', quiet=True)
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-# Download required NLTK resources
-nltk.download('wordnet', quiet=True)
-nltk.download('punkt', quiet=True)
-nltk.download('omw-1.4', quiet=True)
 
 def text_f1_score(gold_tokens, pred_tokens):
     """Compute F1 score based on token set overlap."""
@@ -42,13 +37,13 @@ def compute_metrics(pred: str, gold: str, retrieved_docs: List[str]) -> dict:
     """Compute an enhanced set of evaluation metrics."""
     smoothie = SmoothingFunction().method4
     pred, gold = str(pred), str(gold)
-    pred_tokens, gold_tokens = pred.split(), gold.split()
+    pred_tokens, gold_tokens = pred.split() if isinstance(pred, str) else pred, gold.split() if isinstance(gold, str) else gold
     
     # Standard Metrics
     bleu = sentence_bleu([gold_tokens], pred_tokens, smoothing_function=smoothie)
     rouge_l_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     rouge_l = rouge_l_scorer.score(gold, pred)['rougeL'].fmeasure
-    meteor = meteor_score([gold_tokens], [pred_tokens])
+    meteor = meteor_score([' '.join(gold_tokens)], [' '.join(pred_tokens)])
     f1 = text_f1_score(gold_tokens, pred_tokens)
     em = 1.0 if pred.lower() == gold.lower() else 0.0
     clinical_accuracy = 1.0 if "heart failure" in pred.lower() and any(term in pred.lower() for term in ["low-sodium", "furosemide"]) else 0.0
@@ -96,7 +91,7 @@ def run_experiment(config: tuple, args: argparse.Namespace, docs: list, titles: 
             device_num = 0 if torch.cuda.is_available() else -1
             tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
             model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large", torch_dtype=torch.float16, device_map="auto")
-            generator = baseline_pipeline("text2text-generation", model=model, tokenizer=tokenizer, device=device_num, max_new_tokens=150)
+            generator = baseline_pipeline("text2text-generation", model=model, tokenizer=tokenizer, max_new_tokens=150)
 
         eval_results = []
         for item in eval_data:
