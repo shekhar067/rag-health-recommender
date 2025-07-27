@@ -1,0 +1,8 @@
+query,gold,Baseline LLM,BioBERT + FLAN-T5,PubMedBERT + FLAN-T5
+How is this patient's type 2 diabetes being treated?,The patient is prescribed metformin 500 mg twice daily and has received dietary counseling.,Glucagon,Prescribed metformin 500 mg twice daily,Prescribed metformin 500 mg twice daily
+What is the management strategy for this patient's asthma?,The patient's asthma is managed with continued use of inhaled corticosteroids (budesonide).,Medications,Inhaled corticosteroids (budesonide),Inhaled corticosteroids (budesonide)
+What is the medication plan for this patient's high blood pressure?,The patient's hypertension is managed with lisinopril 10 mg daily and lifestyle changes.,ACE inhibitors,lisinopril 10 mg daily,lisinopril 10 mg daily
+What is the prescribed treatment to manage this patient's fluid status?,The patient is prescribed furosemide 40 mg daily and should monitor his weight daily.,Sodium thiopental,Low-sodium diet,Furosemide
+What is the primary dietary advice for managing this patient's kidney disease?,A low-sodium diet is advised for managing the patient's chronic kidney disease.,Eat a diet high in fruits and vegetables.,Low-sodium diet,Low-sodium diet
+What is the recommended anticoagulation therapy for this patient?,The patient is on warfarin 5 mg daily to continue anticoagulation therapy.,ACE inhibitors,Warfarin 5 mg daily,Warfarin 5 mg daily
+What medication was prescribed to manage the patient's cholesterol?,"Statins, specifically atorvastatin 20 mg, were prescribed to manage his hyperlipidemia.",lisinopril,Statins (atorvastatin 20 mg),Statins (atorvastatin 20 mg)

@@ -1,0 +1,8 @@
+query,prediction,gold,bleu,rougeL,meteor,bertscore_f1
+What is the medication plan for this patient's high blood pressure?,ACE inhibitors,The patient's hypertension is managed with lisinopril 10 mg daily and lifestyle changes.,0.0,0.0,0.0,0.8036614060401917
+How is this patient's type 2 diabetes being treated?,Glucagon,The patient is prescribed metformin 500 mg twice daily and has received dietary counseling.,0.0,0.0,0.0,0.7589470148086548
+What is the management strategy for this patient's asthma?,Medications,The patient's asthma is managed with continued use of inhaled corticosteroids (budesonide).,0.0,0.0,0.0,0.7730047702789307
+What medication was prescribed to manage the patient's cholesterol?,lisinopril,"Statins, specifically atorvastatin 20 mg, were prescribed to manage his hyperlipidemia.",0.0,0.0,0.0,0.7829632759094238
+What is the recommended anticoagulation therapy for this patient?,ACE inhibitors,The patient is on warfarin 5 mg daily to continue anticoagulation therapy.,0.0,0.0,0.0,0.8145952820777893
+What is the prescribed treatment to manage this patient's fluid status?,Sodium thiopental,The patient is prescribed furosemide 40 mg daily and should monitor his weight daily.,0.0,0.0,0.0,0.8106870055198669
+What is the primary dietary advice for managing this patient's kidney disease?,Eat a diet high in fruits and vegetables.,A low-sodium diet is advised for managing the patient's chronic kidney disease.,0.017346544664623025,0.18181818181818182,0.08620689655172413,0.8797990083694458
