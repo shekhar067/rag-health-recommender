@@ -5,6 +5,7 @@ import argparse
 import pandas as pd
 import torch
 import pickle
+import warnings
 from rag_pipeline import load_models, load_mimic_notes, build_or_load_faiss_index, rag_health_recommend
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from rouge_score import rouge_scorer
