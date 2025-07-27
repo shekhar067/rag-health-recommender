@@ -1,4 +1,4 @@
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import os
 import json
 import logging
@@ -37,17 +37,18 @@ def compute_metrics(pred: str, gold: str, retrieved_docs: List[str]) -> dict:
     """Compute an enhanced set of evaluation metrics."""
     smoothie = SmoothingFunction().method4
     pred, gold = str(pred), str(gold)
-    pred_tokens, gold_tokens = pred.split() if isinstance(pred, str) else pred, gold.split() if isinstance(gold, str) else gold
+    pred_tokens = pred.split() if isinstance(pred, str) else ' '.join(map(str, pred)).split() if isinstance(pred, (list, tuple)) else []
+    gold_tokens = gold.split() if isinstance(gold, str) else ' '.join(map(str, gold)).split() if isinstance(gold, (list, tuple)) else []
     
     # Standard Metrics
     bleu = sentence_bleu([gold_tokens], pred_tokens, smoothing_function=smoothie)
     rouge_l_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     rouge_l = rouge_l_scorer.score(gold, pred)['rougeL'].fmeasure
-    meteor = meteor_score([' '.join(gold_tokens)], [' '.join(pred_tokens)])
+    meteor = meteor_score([' '.join(gold_tokens) if gold_tokens else ''], [' '.join(pred_tokens) if pred_tokens else ''])
     f1 = text_f1_score(gold_tokens, pred_tokens)
     em = 1.0 if pred.lower() == gold.lower() else 0.0
     clinical_accuracy = 1.0 if "heart failure" in pred.lower() and any(term in pred.lower() for term in ["low-sodium", "furosemide"]) else 0.0
-
+    logging.info(f"Computing metrics: gold_tokens={gold_tokens}, pred_tokens={pred_tokens}")
     # RAG-Specific & Other Metrics
     pred_ngrams = set(nltk.ngrams(pred_tokens, 3))
     doc_ngrams = set(nltk.ngrams(" ".join(retrieved_docs).split(), 3)) if retrieved_docs else set()
