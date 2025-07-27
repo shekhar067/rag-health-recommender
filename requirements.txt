@@ -28,3 +28,4 @@ google-cloud-aiplatform==1.58.0
 rank-bm25==0.2.2
 
 tensorflow==2.15.0
+seqeval
