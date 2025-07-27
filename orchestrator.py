@@ -8,6 +8,7 @@ import pickle
 from rag_pipeline import load_models, load_mimic_notes, build_or_load_faiss_index, rag_health_recommend
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from seqeval.metrics import f1_score
+from sklearn.metrics import precision_recall_fscore_support
 from rouge_score import rouge_scorer
 from nltk.translate.meteor_score import meteor_score
 from bert_score import score as bert_score
